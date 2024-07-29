@@ -1,0 +1,26 @@
+<FormulationML xmlns="http://www.formatinternational.com/FormulationML">
+  <IngredientList>
+    <Ingredient>
+      <person>
+        <name>John Doe</name>
+        <age>30</age>
+        <test></test>
+        <address>
+          <street>123 Main St</street>
+          <city>Anytown</city>
+        </address>
+        <testlist>
+          <testkey1>
+            <testkey11>testkey12</testkey11>
+          </testkey1>
+          <testkey1>
+            <testkey11>testkey12</testkey11>
+          </testkey1>
+          <testkey2>
+            <testkey21>testkey22</testkey21>
+          </testkey2>
+        </testlist>
+      </person>
+    </Ingredient>
+  </IngredientList>
+</FormulationML>
