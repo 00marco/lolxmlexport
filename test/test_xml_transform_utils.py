@@ -1,5 +1,4 @@
 from ..json_schemas import (
-    custom_transforms_dict_ingredient,
     custom_transforms_dict_product,
 )
 from ..xml_transform_utils import XMLTransformUtils
@@ -32,3 +31,6 @@ class TestXMLTransformUtils:
             expected_xml = file.read()
 
         assert xml_output.strip() == expected_xml.strip()
+
+    def test_convert_json_to_xml_endpoint(self):
+        pass
