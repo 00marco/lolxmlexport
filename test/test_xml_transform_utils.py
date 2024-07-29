@@ -47,8 +47,8 @@ class TestXMLTransformUtils(unittest.TestCase):
                             "key": 1,
                             "body": {
                                 "person": {
-                                    "name": "John Doe",
-                                    "age": 30,
+                                    "name": "John Doe 1",
+                                    "age": 31,
                                     "test": "",
                                     "address": {
                                         "street": "123 Main St",
@@ -66,27 +66,8 @@ class TestXMLTransformUtils(unittest.TestCase):
                             "key": 2,
                             "body": {
                                 "person": {
-                                    "name": "John Doe",
-                                    "age": 30,
-                                    "test": "",
-                                    "address": {
-                                        "street": "123 Main St",
-                                        "city": "Anytown",
-                                    },
-                                    "testlist": [
-                                        {"testkey1": {"testkey11": "testkey12"}},
-                                        {"testkey1": {"testkey11": "testkey12"}},
-                                        {"testkey2": {"testkey21": "testkey22"}},
-                                    ],
-                                }
-                            },
-                        },
-                        {
-                            "key": 3,
-                            "body": {
-                                "person": {
-                                    "name": "John Doe",
-                                    "age": 30,
+                                    "name": "John Doe 2",
+                                    "age": 32,
                                     "test": "",
                                     "address": {
                                         "street": "123 Main St",
