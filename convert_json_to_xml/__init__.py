@@ -4,11 +4,8 @@ import logging
 
 import azure.functions as func
 
-from json_schemas import (
-    custom_transforms_dict,
-)
-
-from xml_transform_utils import XMLTransformUtils
+from ..json_schemas import custom_transforms_dict
+from ..xml_transform_utils import XMLTransformUtils
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -56,8 +53,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
     try:
         req_body = req.get_json()
-        input_jsons = req_body.get("input_jsons") # list of objects in json
-        input_type = req_body.get("input_type") # Ingredient or Product
+        # print(req.get_body())
+        # print()
+        # print(req.get_json())
+        input_jsons = req_body.get("input_jsons")  # list of objects in json
+        input_type = req_body.get("input_type")  # Ingredient or Product
 
         xml_outputs = []
         xmlTransformUtils = XMLTransformUtils()
@@ -68,16 +68,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 root_name="FormulationML",
                 custom_transforms_dict=custom_transforms_dict,
             )
-            xml_outputs.append({
-                "key": input_json["key"],
-                "xml": xml_output
-            })
+            xml_outputs.append({"key": input_json["key"], "xml": xml_output})
     except Exception as e:
-        return func.HttpResponse(
-            f"Error: {e}", status_code=400
-        )
+        print(dir(req))
+        print()
+        print(req.get_body())
+        raise e
+        return func.HttpResponse(f"Error: {e}", status_code=400)
 
     return func.HttpResponse(
-        json.dumps(xml_outputs),
+        "Test",
         status_code=200,
     )
