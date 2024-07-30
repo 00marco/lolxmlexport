@@ -45,7 +45,7 @@ class XMLTransformUtils:
             return {"IngredientList": [{"Ingredient": input_dict}]}
         else:
             raise TypeError
-        
+
     def indent(self, elem, level=0):
         # Add indentation
         indent_size = "  "
@@ -62,7 +62,6 @@ class XMLTransformUtils:
         else:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
-
 
     def dict_to_xml(self, tag, d, custom_transforms_dict):
         """
@@ -114,7 +113,8 @@ class XMLTransformUtils:
             custom_transforms_dict,
         )
         root.set("xmlns", "http://www.formatinternational.com/FormulationML")
-        self.indent(root)
-        xml_str = ET.tostring(root, encoding="unicode", short_empty_elements=
-                              False).replace("ns0:", "")
+        # self.indent(root)
+        xml_str = ET.tostring(
+            root, encoding="unicode", short_empty_elements=False
+        ).replace("ns0:", "")
         return xml_str
