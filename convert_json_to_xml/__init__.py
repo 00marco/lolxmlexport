@@ -4,41 +4,50 @@ import json
 import logging
 import os
 import tempfile
+from datetime import datetime
 
 import azure.functions as func
-
-# from azure.storage.blob import BlobClient, BlobServiceClient, ContainerClient
+from azure.storage.blob import BlobServiceClient as SynchronousBlobServiceClient
 from azure.storage.blob.aio import BlobClient, BlobServiceClient, ContainerClient
 
 from ..json_schemas import custom_transforms_dict
-from ..storage_utils import get_file
 from ..xml_transform_utils import XMLTransformUtils
 
-# async def upload_blob_file(self, blob_service_client: BlobServiceClient, container_name: str):
-#     container_client = blob_service_client.get_container_client(container=container_name)
-#     with open(file=os.path.join('filepath', 'filename'), mode="rb") as data:
-#         blob_client = await container_client.upload_blob(name="sample-blob.txt", data=data, overwrite=True)
 
-# async def async_main(blob_data):
-#     # TODO: Replace <storage-account-name> with your actual storage account name
-#     account_url = "https://testrbt109238102983.blob.core.windows.net"
-#     connection_string = os.getenv("AzureStorageConnectionString")
+def get_file(filename: str, filepath: str):
+    # Blob storage connection string and container name
+    connect_str = os.getenv("AzureStorageConnectionString")
+    container_name = "xmlexport"
+    blob_name = os.path.join(filepath, filename)
 
-#     async with BlobServiceClient.from_connection_string(connection_string) as blob_service_client:
-#         await blob_data.upload_blob_file(blob_service_client, "xmlexport")
+    # Create the BlobServiceClient object
+    blob_service_client = SynchronousBlobServiceClient.from_connection_string(
+        connect_str
+    )
+
+    # Get the blob client
+    blob_client = blob_service_client.get_blob_client(
+        container=container_name, blob=blob_name
+    )
+
+    blob_data = blob_client.download_blob().readall()
+    return blob_data
 
 
-async def convert_and_process_file(input_json_str: str):
-    # Convert file
+async def convert_and_process_file(
+    input_json_str: str, input_file_type: str, input_file_path: str, input_filename: str
+):
+    # Convert JSON to XML
     xmlTransformUtils = XMLTransformUtils()
     input_json = json.loads(input_json_str)
     xml_output = XMLTransformUtils().json_to_xml(
         json_obj=input_json,
-        dict_type="Ingredient",  # TODO infer from schema
+        dict_type=input_file_type,
         root_name="FormulationML",
         custom_transforms_dict=custom_transforms_dict,
     )
 
+    # Upload XML to file
     connection_string = os.getenv("AzureStorageConnectionString")
     container_name = "xmlexport"
     async with BlobServiceClient.from_connection_string(
@@ -46,31 +55,71 @@ async def convert_and_process_file(input_json_str: str):
     ) as blob_service_client:
         container_client = blob_service_client.get_container_client(container_name)
         blob_name = os.path.join(
-            "output_ingredient_xml",
-            "20240716",  # TODO get somewhere else; maybe another function param
-            f"output_{input_json['IngredientCode']}.xml",
+            input_file_path,
+            "xml_files",
+            input_filename,
         )
         blob_client = container_client.get_blob_client(blob_name)
 
         await blob_client.upload_blob(xml_output, overwrite=True)
-        print(f"Uploaded to blob {blob_client.blob_name}.")
+        logging.debug(f"Uploaded to blob {blob_client.blob_name}.")
 
 
 async def main(req: func.HttpRequest) -> func.HttpResponse:
     # try:
-    logging.info("Python HTTP trigger function processed a request.")
-
-    xml_outputs = []
+    logging.debug("Python HTTP trigger function processed a request.")
 
     input_json_file = get_file(
         filename=req.params["filename"], filepath=req.params["filepath"]
     ).decode("utf-8")
-
     input_jsons = [x for x in input_json_file.strip().split("\n")]
-    tasks = [asyncio.create_task(convert_and_process_file(x)) for x in input_jsons]
-    done, pending = await asyncio.wait(tasks)
+
+    tasks = []
+    for input_json_str in input_jsons:
+        try:
+            input_json = json.loads(input_json_str)
+            input_json_type = req.params["type"]
+            plantcode = str(input_json.get("PlantCode")).zfill(4)
+            if input_json_type == "Ingredient":
+                code = input_json.get("IngredientCode")
+            elif input_json_type == "Product":
+                code = input_json.get("RecipeCode")
+            else:
+                raise ValueError
+
+            datetime_str = (
+                datetime.strptime(input_json["DateCreated"], "%Y-%m-%d")
+                .strftime("%Y-%m-%d %H:%M:%S")
+                .replace("-", "")
+                .replace(" ", "")
+                .replace(":", "")
+            )
+
+            input_filename = (
+                f"Ration{input_json_type}_{plantcode}_{code}_{datetime_str}.xml"
+            )
+            tasks.append(
+                asyncio.create_task(
+                    convert_and_process_file(
+                        input_json_str=input_json_str,
+                        input_file_type=input_json_type,
+                        input_file_path=req.params["filepath"],
+                        input_filename=input_filename,
+                    )
+                )
+            )
+        except Exception as e:
+            logging.debug(
+                f"error adding record to task: {e} --- Ingredient: {input_json['IngredientCode']} -- Plant: {input_json['PlantCode']}"
+            )
+    await asyncio.wait(tasks)
 
     return func.HttpResponse(
-        json.dumps(xml_outputs),
+        f"Successfully uploaded {len(input_jsons)} XML files",
         status_code=200,
     )
+    # except Exception as e:
+    #     return func.HttpResponse(
+    #         "There was an error with executing the function",
+    #         status_code=500,
+    #     )

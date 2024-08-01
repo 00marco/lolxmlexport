@@ -91,7 +91,7 @@ class TestXMLTransformUtils(unittest.TestCase):
         # Call the function.
         resp = main(req)
 
-        print(resp.get_body())
+        logging.debug(resp.get_body())
         # Check the output.
         self.assertEqual(
             resp.get_body(),

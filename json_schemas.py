@@ -20,3 +20,7 @@ custom_transforms_dict = {
         },
     ]
 }
+
+expected_ingredient_schema = {}
+
+expected_product_schema = {}

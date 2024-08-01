@@ -1,4 +1,5 @@
 import json
+import logging
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 
@@ -29,7 +30,7 @@ class XMLTransformUtils:
                 return schema["title"]
 
             except ValidationError as e:
-                print(f"Validation Error: {schema['title']}")
+                logging.debug(f"Validation Error: {schema['title']}")
 
         raise ValueError
 
@@ -99,6 +100,59 @@ class XMLTransformUtils:
             elem.text = str(d)
         return elem
 
+    def standardize_input_dict_schema(self, data, dict_type):
+        # TODO finish this
+        referenceList = data.get("ReferenceList")
+        if not referenceList:
+            referenceList = []
+
+        if (
+            len(
+                [
+                    x
+                    for x in referenceList
+                    if x.get("Reference", {"ReferenceName": None}).get("ReferenceName")
+                    == "ExternalRef"
+                ]
+            )
+            == 0
+        ):
+            referenceList.append(
+                {"Reference": {"ReferenceName": "ExternalName", "ReferenceCode": ""}}
+            )
+
+        if (
+            len(
+                [
+                    x
+                    for x in referenceList
+                    if x.get("Reference", {"ReferenceName": None}).get("ReferenceName")
+                    == "VMKey"
+                ]
+            )
+            == 0
+        ):
+            referenceList.append(
+                {"Reference": {"ReferenceName": "VMKey", "ReferenceCode": ""}}
+            )
+
+        if (
+            len(
+                [
+                    x
+                    for x in referenceList
+                    if x.get("Reference", {"ReferenceName": None}).get("ReferenceName")
+                    == "Version"
+                ]
+            )
+            == 0
+        ):
+            referenceList.append(
+                {"Reference": {"ReferenceName": "Version", "ReferenceCode": ""}}
+            )
+
+        return self.add_parent_keys_to_dict(data, dict_type)
+
     def json_to_xml(
         self,
         json_obj: dict,
@@ -109,7 +163,7 @@ class XMLTransformUtils:
     ):
         root = self.dict_to_xml(
             root_name,
-            self.add_parent_keys_to_dict(json_obj, dict_type),
+            self.standardize_input_dict_schema(json_obj, dict_type),
             custom_transforms_dict,
         )
         root.set("xmlns", "http://www.formatinternational.com/FormulationML")
