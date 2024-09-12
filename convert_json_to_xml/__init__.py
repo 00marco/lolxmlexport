@@ -29,9 +29,12 @@ def get_file(filename: str, filepath: str):
     blob_client = blob_service_client.get_blob_client(
         container=container_name, blob=blob_name
     )
-
-    blob_data = blob_client.download_blob().readall()
-    return blob_data
+    prop = blob_client.get_blob_properties()
+    if prop.size > 0:
+        blob_data = blob_client.download_blob().readall()
+        return blob_data
+    else:
+        return None
 
 
 async def convert_and_process_file(
@@ -72,18 +75,35 @@ async def main(req: func.HttpRequest) -> func.HttpResponse:
     input_json_file = get_file(
         filename=req.params["filename"], filepath=req.params["filepath"]
     ).decode("utf-8")
-    input_jsons = [x for x in input_json_file.strip().split("\n")]
+    if not input_json_file:
+        return func.HttpResponse(
+            f"File is empty.",
+            status_code=200,
+        )
 
+    input_jsons = [x for x in input_json_file.strip().split("\n") if len(x) > 0]
     tasks = []
+
     for input_json_str in input_jsons:
         try:
+            if not any(
+                x
+                in [
+                    "PlantCode",
+                    "IngredientCode",
+                    "RecipeCode",
+                    "DateCreated",
+                ]
+                for x in input_json.keys()
+            ):
+                raise ValueError
             input_json = json.loads(input_json_str)
             input_json_type = req.params["type"]
-            plantcode = str(input_json.get("PlantCode")).zfill(4)
+            plantcode = str(input_json["PlantCode"]).zfill(4)
             if input_json_type == "Ingredient":
-                code = input_json.get("IngredientCode")
+                code = input_json["IngredientCode"]
             elif input_json_type == "Product":
-                code = input_json.get("RecipeCode")
+                code = input_json["RecipeCode"]
             else:
                 raise ValueError
 
@@ -110,7 +130,7 @@ async def main(req: func.HttpRequest) -> func.HttpResponse:
             )
         except Exception as e:
             logging.debug(
-                f"error adding record to task: {e} --- Ingredient: {input_json['IngredientCode']} -- Plant: {input_json['PlantCode']}"
+                f"error adding record to task: {e}. input_json: {input_json[:100]}..."
             )
     await asyncio.wait(tasks)
 
